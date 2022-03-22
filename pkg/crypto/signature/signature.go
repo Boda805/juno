@@ -72,6 +72,7 @@ type PublicKey struct {
 func (pub *PublicKey) Equal(x crypto.PublicKey) bool {
 	xx, ok := x.(*PublicKey)
 	if !ok {
+		// notest
 		return false
 	}
 	return pub.X.Cmp(xx.X) == 0 && pub.Y.Cmp(xx.Y) == 0 &&
@@ -99,6 +100,7 @@ func (pvt *PrivateKey) Public() crypto.PublicKey {
 func (pvt *PrivateKey) Equal(x crypto.PrivateKey) bool {
 	xx, ok := x.(*PrivateKey)
 	if !ok {
+		// notest
 		return false
 	}
 	return pvt.PublicKey.Equal(&xx.PublicKey) && pvt.D.Cmp(xx.D) == 0
@@ -262,6 +264,7 @@ func sign(
 	// SEC 1, Version 2.0, Section 4.1.3
 	N := c.Params().N
 	if N.Sign() == 0 {
+		// notest
 		return nil, nil, errZeroParam
 	}
 	var k, kInv *big.Int
@@ -274,6 +277,9 @@ func sign(
 			}
 
 			if in, ok := pvt.Curve.(invertible); ok {
+				// XXX: The following should be removed if more curves are added
+				// that implement fast inverse.
+				// notest
 				kInv = in.Inverse(k)
 			} else {
 				kInv = fermatInverse(k, N) // N != 0
@@ -319,6 +325,7 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 		return false
 	}
 	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 {
+		// notest
 		return false
 	}
 	return verify(pub, c, hash, r, s)
@@ -332,6 +339,9 @@ func verify(
 	var w *big.Int
 	N := c.Params().N
 	if in, ok := c.(invertible); ok {
+		// XXX: The following should be removed if more curves are added
+		// that are invertible.
+		// notest
 		w = in.Inverse(s)
 	} else {
 		w = new(big.Int).ModInverse(s, N)
@@ -345,6 +355,9 @@ func verify(
 	// Check if implements S1*g + S2*p
 	var x, y *big.Int
 	if opt, ok := c.(combinedMult); ok {
+		// XXX: The following should be removed if more curves are added
+		// that support a combined multiplication operation.
+		// notest
 		x, y = opt.CombinedMult(pub.X, pub.Y, u1.Bytes(), u2.Bytes())
 	} else {
 		x1, y1 := c.ScalarBaseMult(u1.Bytes())
@@ -353,6 +366,7 @@ func verify(
 	}
 
 	if x.Sign() == 0 && y.Sign() == 0 {
+		// notest
 		return false
 	}
 	x.Mod(x, N)
@@ -363,6 +377,7 @@ func verify(
 // the public key, pub. Its return value records whether the signature
 // is valid.
 func VerifyASN1(pub *PublicKey, hash, sig []byte) bool {
+	// notest
 	var (
 		r, s  = &big.Int{}, &big.Int{}
 		inner cryptobyte.String

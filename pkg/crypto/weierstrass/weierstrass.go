@@ -203,6 +203,9 @@ func (curve *CurveParams) addJacobian(
 	}
 	yEqual := r.Sign() == 0
 	if xEqual && yEqual {
+		// XXX: The following should be remove if more curves are added that
+		// can branch out to a more optimised computation at this point.
+		// notest
 		return curve.doubleJacobian(x1, y1, z1)
 	}
 	r.Lsh(r, 1)
@@ -271,10 +274,12 @@ func (curve *CurveParams) doubleJacobian(
 	s.Mul(s, s)
 	s.Sub(s, xx)
 	if s.Sign() == -1 {
+		// notest
 		s.Add(s, curve.P)
 	}
 	s.Sub(s, yyyy)
 	if s.Sign() == -1 {
+		// notest
 		s.Add(s, curve.P)
 	}
 	s.Lsh(s, 1)
@@ -292,6 +297,7 @@ func (curve *CurveParams) doubleJacobian(
 	t := new(big.Int).Mul(m, m)
 	t.Sub(t, new(big.Int).Lsh(s, 1))
 	if t.Sign() == -1 {
+		// notest
 		t.Add(t, curve.P)
 	}
 	t.Mod(t, curve.P)
@@ -307,6 +313,7 @@ func (curve *CurveParams) doubleJacobian(
 	y3.Mul(y3, m)
 	y3.Sub(y3, new(big.Int).Lsh(yyyy, 3))
 	if y3.Sign() == -1 {
+		// notest
 		y3.Add(y3, curve.P)
 	}
 	y3.Mod(y3, curve.P)
@@ -316,10 +323,12 @@ func (curve *CurveParams) doubleJacobian(
 	z3.Mul(z3, z3)
 	z3.Sub(z3, yy)
 	if z3.Sign() == -1 {
+		// notest
 		z3.Add(z3, curve.P)
 	}
 	z3.Sub(z3, zz)
 	if z3.Sign() == -1 {
+		// notest
 		z3.Add(z3, curve.P)
 	}
 	z3.Mod(z3, curve.P)
@@ -424,6 +433,7 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 		return nil, nil
 	}
 	if data[0] != 4 { // uncompressed form
+		// notest
 		return nil, nil
 	}
 	p := curve.Params().P
@@ -445,26 +455,32 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 func UnmarshalCompressed(curve Curve, data []byte) (x, y *big.Int) {
 	byteLen := (curve.Params().BitSize + 7) / 8
 	if len(data) != 1+byteLen {
+		// notest
 		return nil, nil
 	}
 	if data[0] != 2 && data[0] != 3 { // compressed form
+		// notest
 		return nil, nil
 	}
 	p := curve.Params().P
 	x = new(big.Int).SetBytes(data[1:])
 	if x.Cmp(p) >= 0 {
+		// notest
 		return nil, nil
 	}
 	// y² = x³ - 3x + b (mod p).
 	y = curve.Params().short(x)
 	y = y.ModSqrt(y, p)
 	if y == nil {
+		// notest
 		return nil, nil
 	}
 	if byte(y.Bit(0)) != data[0]&1 {
+		// notest
 		y.Neg(y).Mod(y, p)
 	}
 	if !curve.IsOnCurve(x, y) {
+		// notest
 		return nil, nil
 	}
 	return

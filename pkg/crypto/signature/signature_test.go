@@ -93,12 +93,34 @@ func Example() {
 	fmt.Println("signature verified:", valid)
 }
 
+// TestASN1 tests the signing and verification process for ASN1 encoded
+// messages.
+func TestASN1(t *testing.T) {
+	privateKey, err := GenerateKey(weierstrass.Stark(), rand.Reader)
+	if err != nil {
+		t.Fatal("failed to generate key")
+	}
+
+	msg := "Hello, World!"
+	hash := sha256.Sum256([]byte(msg))
+
+	sig, err := SignASN1(rand.Reader, privateKey, hash[:])
+	if err != nil {
+		t.Fatal("failed to sign message")
+	}
+
+	valid := VerifyASN1(&privateKey.PublicKey, hash[:], sig)
+	if !valid {
+		t.Error("signature is not valid")
+	}
+}
+
 // TestKeyGeneration tests the validity of the public keys generated
 // from the key generation process.
 func TestKeyGeneration(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("failed to generate key")
 	}
 	if !curve.IsOnCurve(pvt.PublicKey.X, pvt.PublicKey.Y) {
 		t.Errorf("public key invalid: %s", err)
@@ -109,7 +131,7 @@ func TestKeyGeneration(t *testing.T) {
 func TestSignAndVerify(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Error("failed to generate key")
+		t.Fatal("failed to generate key")
 	}
 
 	hashed := []byte("testing")
@@ -134,21 +156,19 @@ func TestSignAndVerify(t *testing.T) {
 func TestNonceSafety(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Error("failed to generate key")
+		t.Fatal("failed to generate key")
 	}
 
 	hashed := []byte("testing")
 	r0, s0, err := Sign(zeroReader, pvt, hashed)
 	if err != nil {
-		t.Errorf("error signing: %s", err)
-		return
+		t.Fatalf("error signing: %s", err)
 	}
 
 	hashed = []byte("testing...")
 	r1, s1, err := Sign(zeroReader, pvt, hashed)
 	if err != nil {
-		t.Errorf("error signing: %s", err)
-		return
+		t.Fatalf("error signing: %s", err)
 	}
 
 	if s0.Cmp(s1) == 0 {
@@ -166,21 +186,19 @@ func TestNonceSafety(t *testing.T) {
 func TestIndcca(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Errorf("failed to generate key")
+		t.Fatal("failed to generate key")
 	}
 
 	hashed := []byte("testing")
 	r0, s0, err := Sign(rand.Reader, pvt, hashed)
 	if err != nil {
-		t.Errorf("error signing: %s", err)
-		return
+		t.Fatalf("error signing: %s", err)
 	}
 
 	hashed = []byte("testing...")
 	r1, s1, err := Sign(rand.Reader, pvt, hashed)
 	if err != nil {
-		t.Errorf("error signing: %s", err)
-		return
+		t.Fatalf("error signing: %s", err)
 	}
 
 	if s0.Cmp(s1) == 0 {
@@ -198,7 +216,7 @@ func TestIndcca(t *testing.T) {
 func TestNegativeInputs(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Error("failed to generate key")
+		t.Fatal("failed to generate key")
 	}
 
 	var hash [32]byte
@@ -216,25 +234,27 @@ func TestNegativeInputs(t *testing.T) {
 func TestZeroHashSignature(t *testing.T) {
 	pvt, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Error("failed to generate key")
+		t.Fatal("failed to generate key")
 	}
 
 	hash := make([]byte, 64)
 	r, s, err := Sign(rand.Reader, pvt, hash)
 	if err != nil {
-		t.Errorf("error signing: %s", err)
-		return
+		t.Fatalf("error signing: %s", err)
 	}
 
 	if !Verify(&pvt.PublicKey, hash, r, s) {
-		t.Errorf("failed to verify message with a zeroed byte array for %T", curve)
+		t.Fatalf("failed to verify message with a zeroed byte array for %T", curve)
 	}
 }
 
 // TestEqual runs a range of equality tests on the curve(s) in this
 // package.
 func TestEqual(t *testing.T) {
-	private, _ := GenerateKey(curve, rand.Reader)
+	private, err := GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Fatal("failed to generate key")
+	}
 	public := &private.PublicKey
 
 	if !public.Equal(public) {

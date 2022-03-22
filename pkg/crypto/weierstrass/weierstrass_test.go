@@ -112,7 +112,7 @@ func TestInfinity(t *testing.T) {
 	// there are two valid points with x = 0.
 	xx, yy = Unmarshal(curve, []byte{0x00})
 	if xx != nil || yy != nil {
-		t.Errorf("Unmarshal(∞) did not return an error")
+		t.Error("Unmarshal(∞) did not return an error")
 	}
 }
 
@@ -120,7 +120,7 @@ func TestInfinity(t *testing.T) {
 func TestMarshal(t *testing.T) {
 	_, x, y, err := GenerateKey(curve, rand.Reader)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to generate key: %v", err)
 	}
 	serialized := Marshal(curve, x, y)
 	xx, yy := Unmarshal(curve, serialized)
@@ -151,7 +151,7 @@ func TestUnmarshalToLargeCoordinates(t *testing.T) {
 	y.FillBytes(invalid[1+byteLen:])
 
 	if X, Y := Unmarshal(curve, invalid); X != nil || Y != nil {
-		t.Errorf("Unmarshal accepts invalid X coordinate")
+		t.Error("Unmarshal accepts invalid X coordinate")
 	}
 }
 
@@ -207,8 +207,37 @@ func TestInvalidCoordinates(t *testing.T) {
 	}
 }
 
-// XXX: TestMarshalCompressed.
+// TestMarshallCompressed checks whether points can be compressed and
+// deserialised successfully.
+func TestMarshallCompressed(t *testing.T) {
+	_, x, y, err := GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	if !curve.IsOnCurve(x, y) {
+		t.Fatal("invalid test point")
+	}
 
+	got := MarshalCompressed(curve, x, y)
+
+	X, Y := UnmarshalCompressed(curve, got)
+	if X == nil || Y == nil {
+		t.Fatal("UnmarshalCompressed failed unexpectedly")
+	}
+
+	if !curve.IsOnCurve(X, Y) {
+		t.Error("UnmarshalCompressed returned a point not on the curve")
+	}
+
+	if X.Cmp(x) != 0 || Y.Cmp(y) != 0 {
+		t.Errorf(
+			"point did not round-trip correctly: got (%v, %v), want (%v, %v)",
+			X, Y, x, y)
+	}
+}
+
+// TestLargeIsOnCurve checks whether a point with (invalid) large
+// coordinates is reported to be on the curve.
 func TestLargeIsOnCurve(t *testing.T) {
 	large := big.NewInt(1)
 	large.Lsh(large, 1000)
